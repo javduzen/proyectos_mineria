@@ -7,7 +7,7 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Actividad Ayudantia 2
+## Actividad Ayudantia 2: Javiera Bustos
   Replicar lo realizado en la ayudantia (analisis exploratorio de los datos, limpieza, sub dataframes, filtro y graficar ), pueden         elegir otro equipo para que puedan explorar otros datos
 
 
@@ -20,11 +20,10 @@ library(tidyverse)
 library(utf8)
 library(ggplot2)
 
-setwd("D:/Users/Italo/Documents/Italo Felipe/UAI/Semestre 11/Ayudantia Mineria de Datos/Ayudantia_DataMining01_2021/Ayudantia 2")
+setwd("C:/Users/Javiera/Desktop/RAMOS 2021/Minería/proyectos_mineria/Actividad_A2")
 primer_tiempo2020 <- read_csv("Primer_Tiempo2020.csv", col_names = TRUE)
 
-#str(primer_tiempo2020)
-#attach(primer_tiempo2020)
+
 summary(primer_tiempo2020)
 ```
 
@@ -58,48 +57,37 @@ fh2020_tiros
 
 ## Filtrar Datos
 ```{r}
-huachipato <- filter(primer_tiempo2020, equipo == "Huachipato")
-huachipato_tiros <- filter(fh2020_tiros, equipo == "Huachipato")
-huachipato_pases <- filter(fh2020_pases, equipo == "Huachipato")
+cobresal <- filter(primer_tiempo2020, equipo == "Cobresal")
+cobresal_tiros <- filter(fh2020_tiros, equipo == "Cobresal")
+cobresal_pases <- filter(fh2020_pases, equipo == "Cobresal")
 ```
 
 ## Agregar Promedio/Suma Total/Min/...
 ```{r}
-huachipato_pases <- huachipato_pases[,!(colnames(huachipato_pases) %in% c("equipo"))] 
+cobresal_pases <- cobresal_pases[,!(colnames(cobresal_pases) %in% c("equipo"))] 
 
-Promedios_Pas <- c("Promedio Pases",mean(huachipato_pases$accuratePass),mean(huachipato_pases$totalPass),mean(huachipato_pases$precision_pases))
-huachipato_pases <- rbind(huachipato_pases, Promedios_Pas)
+Promedios_Pas <- c("Promedio Pases",mean(cobresal_pases$accuratePass),mean(cobresal_pases$totalPass),mean(cobresal_pases$precision_pases))
+cobresal_pases <- rbind(cobresal_pases, Promedios_Pas)
 
-Max_Pas <- c("Max Pases",max(huachipato_pases$accuratePass),max(huachipato_pases$totalPass),max(huachipato_pases$precision_pases))
-huachipato_pases <- rbind(huachipato_pases, Max_Pas)
+Max_Pas <- c("Max Pases",max(cobresal_pases$accuratePass),max(cobresal_pases$totalPass),max(cobresal_pases$precision_pases))
+cobresal_pases <- rbind(cobresal_pases, Max_Pas)
 
-Min_Pas <- c("Min Pases",min(huachipato_pases$accuratePass),min(huachipato_pases$totalPass),min(huachipato_pases$precision_pases))
-huachipato_pases <- rbind(huachipato_pases, Min_Pas)
+Min_Pas <- c("Min Pases",min(cobresal_pases$accuratePass),min(cobresal_pases$totalPass),min(cobresal_pases$precision_pases))
+cobresal_pases <- rbind(cobresal_pases, Min_Pas)
 
-huachipato_pases
+cobresal_pases
 ```
 
 ## Graficos
 ```{r}
-pases_hua <- huachipato$accuratePass
-huachipato2 <- huachipato[order(huachipato$accuratePass, decreasing = FALSE),]
+pases_cobresal <- cobresal$accuratePass
+cobresal2 <- cobresal[order(cobresal$accuratePass, decreasing = FALSE),]
 
-#dotchart(huachipato$totalPass, labels = huachipato$partido, cex=0.5, xlab = "Pases", ylab = "Partido")
 
-dotchart(huachipato$totalPass, labels = utf8_encode(huachipato$partido), cex=0.5, xlab = "Pases", ylab = "Partido")
-dotchart(huachipato$accuratePass, labels = utf8_encode(huachipato$partido), cex=0.5, xlab = "Pases", ylab = "Partido")
-dotchart(huachipato2$totalPass, labels = utf8_encode(huachipato$partido), cex=0.5, xlab = "Pases", ylab = "Partido")
-dotchart(huachipato2$totalPass, labels = utf8_encode(huachipato$partido), main="Pases Acertados Huachipato", pch = 16, col=c("darkblue","dodgerblue"),lcolor="gray90", cex=0.8, xlab = "Pases", ylab = "Partido", cex.main=2,cex.lab=1.5)
-```
 
-## Analisis de Texto
-
-```{r analisis texto}
-texto <- primer_tiempo2020$partido
-texto <- char_tolower(texto)
-texto <- iconv(texto, to = "ASCII//TRANSLIT")
-
-a <- dfm(texto, remove = c(stopwords("es"), "vs", "Universidad"))
-dim(a)
+dotchart(cobresal$totalPass, labels = utf8_encode(cobresal$partido), cex=0.5, xlab = "Pases", ylab = "Partido")
+dotchart(cobresal$accuratePass, labels = utf8_encode(cobresal$partido), cex=0.5, xlab = "Pases", ylab = "Partido")
+dotchart(cobresal2$totalPass, labels = utf8_encode(cobresal$partido), cex=0.5, xlab = "Pases", ylab = "Partido")
+dotchart(cobresal2$totalPass, labels = utf8_encode(cobresal$partido), main="Pases Acertados cobresal", pch = 16, col=c("darkblue","dodgerblue"),lcolor="gray90", cex=0.8, xlab = "Pases", ylab = "Partido", cex.main=2,cex.lab=1.5)
 ```
 

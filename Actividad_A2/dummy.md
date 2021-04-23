@@ -1,7 +1,7 @@
 Ayudantia 2
 ================
 
-## Actividad Ayudantia 2: Javiera Bustos
+## Actividad Ayudantia 2
 
 Replicar lo realizado en la ayudantia (analisis exploratorio de los
 datos, limpieza, sub dataframes, filtro y graficar ), pueden elegir otro
@@ -13,15 +13,18 @@ equipo para que puedan explorar otros datos
 library(quanteda)
 ```
 
-    ## Warning: package 'quanteda' was built under R version 4.0.5
+    ## Package version: 2.1.2
 
-    ## Package version: 3.0.0
-    ## Unicode version: 10.0
-    ## ICU version: 61.1
-
-    ## Parallel computing: 4 of 4 threads used.
+    ## Parallel computing: 2 of 4 threads used.
 
     ## See https://quanteda.io for tutorials and examples.
+
+    ## 
+    ## Attaching package: 'quanteda'
+
+    ## The following object is masked from 'package:utils':
+    ## 
+    ##     View
 
 ``` r
 library(dplyr)
@@ -42,14 +45,14 @@ library(dplyr)
 library(tidyverse)
 ```
 
-    ## -- Attaching packages --------------------------------------- tidyverse 1.3.0 --
+    ## -- Attaching packages ------------------------------------------------------------------------------------------------- tidyverse 1.3.0 --
 
-    ## v ggplot2 3.3.3     v purrr   0.3.4
-    ## v tibble  3.1.0     v stringr 1.4.0
-    ## v tidyr   1.1.3     v forcats 0.5.1
-    ## v readr   1.4.0
+    ## v ggplot2 3.3.0     v purrr   0.3.3
+    ## v tibble  3.0.0     v stringr 1.4.0
+    ## v tidyr   1.0.2     v forcats 0.5.0
+    ## v readr   1.3.1
 
-    ## -- Conflicts ------------------------------------------ tidyverse_conflicts() --
+    ## -- Conflicts ---------------------------------------------------------------------------------------------------- tidyverse_conflicts() --
     ## x dplyr::filter() masks stats::filter()
     ## x dplyr::lag()    masks stats::lag()
 
@@ -57,12 +60,11 @@ library(tidyverse)
 library(utf8)
 library(ggplot2)
 
-setwd("C:/Users/Javiera/Desktop/RAMOS 2021/Minería/proyectos_mineria/Actividad_A2")
+setwd("D:/Users/Italo/Documents/Italo Felipe/UAI/Semestre 11/Ayudantia Mineria de Datos/Ayudantia_DataMining01_2021/Ayudantia 2")
 primer_tiempo2020 <- read_csv("Primer_Tiempo2020.csv", col_names = TRUE)
 ```
 
-    ## 
-    ## -- Column specification --------------------------------------------------------
+    ## Parsed with column specification:
     ## cols(
     ##   .default = col_double(),
     ##   torneo = col_character(),
@@ -73,9 +75,12 @@ primer_tiempo2020 <- read_csv("Primer_Tiempo2020.csv", col_names = TRUE)
     ##   local = col_logical(),
     ##   tiempo = col_character()
     ## )
-    ## i Use `spec()` for the full column specifications.
+
+    ## See spec(...) for full column specifications.
 
 ``` r
+#str(primer_tiempo2020)
+#attach(primer_tiempo2020)
 summary(primer_tiempo2020)
 ```
 
@@ -178,18 +183,18 @@ primer_tiempo2020
 ```
 
     ## # A tibble: 130 x 49
-    ##    torneo   equipo   id_partido  partido   fasepartido local tiempo accuratePass
-    ##    <chr>    <chr>    <chr>       <chr>     <chr>       <lgl> <chr>         <dbl>
-    ##  1 Primera~ Uni<f3>~ 6xszsf73jq~ Universi~ Regular Se~ FALSE fh              235
-    ##  2 Primera~ Univers~ 6xszsf73jq~ Universi~ Regular Se~ TRUE  fh              199
-    ##  3 Primera~ Everton  e88gat05jr~ Universi~ Regular Se~ FALSE fh              157
-    ##  4 Primera~ Univers~ e88gat05jr~ Universi~ Regular Se~ TRUE  fh              192
-    ##  5 Primera~ Curic<f~ 35ijq76er8~ Universi~ Regular Se~ FALSE fh              142
-    ##  6 Primera~ Univers~ 35ijq76er8~ Universi~ Regular Se~ TRUE  fh              168
-    ##  7 Primera~ Coquimb~ 9o9ji2f68p~ Universi~ Regular Se~ FALSE fh              190
-    ##  8 Primera~ Univers~ 9o9ji2f68p~ Universi~ Regular Se~ TRUE  fh              200
-    ##  9 Primera~ Santiag~ 357wqv3701~ Universi~ Regular Se~ FALSE fh              156
-    ## 10 Primera~ Univers~ 357wqv3701~ Universi~ Regular Se~ TRUE  fh               92
+    ##    torneo equipo id_partido partido fasepartido local tiempo accuratePass
+    ##    <chr>  <chr>  <chr>      <chr>   <chr>       <lgl> <chr>         <dbl>
+    ##  1 Prime~ Uni<f~ 6xszsf73j~ Univer~ Regular Se~ FALSE fh              235
+    ##  2 Prime~ Unive~ 6xszsf73j~ Univer~ Regular Se~ TRUE  fh              199
+    ##  3 Prime~ Evert~ e88gat05j~ Univer~ Regular Se~ FALSE fh              157
+    ##  4 Prime~ Unive~ e88gat05j~ Univer~ Regular Se~ TRUE  fh              192
+    ##  5 Prime~ Curic~ 35ijq76er~ Univer~ Regular Se~ FALSE fh              142
+    ##  6 Prime~ Unive~ 35ijq76er~ Univer~ Regular Se~ TRUE  fh              168
+    ##  7 Prime~ Coqui~ 9o9ji2f68~ Univer~ Regular Se~ FALSE fh              190
+    ##  8 Prime~ Unive~ 9o9ji2f68~ Univer~ Regular Se~ TRUE  fh              200
+    ##  9 Prime~ Santi~ 357wqv370~ Univer~ Regular Se~ FALSE fh              156
+    ## 10 Prime~ Unive~ 357wqv370~ Univer~ Regular Se~ TRUE  fh               92
     ## # ... with 120 more rows, and 41 more variables: wonTackle <dbl>,
     ## #   lostCorners <dbl>, goalsConceded <dbl>, saves <dbl>,
     ## #   ontargetScoringAtt <dbl>, totalScoringAtt <dbl>, subsMade <dbl>,
@@ -211,18 +216,18 @@ primer_tiempo2020
 ```
 
     ## # A tibble: 130 x 43
-    ##    equipo    partido      accuratePass wonTackle lostCorners goalsConceded saves
-    ##    <chr>     <chr>               <dbl>     <dbl>       <dbl>         <dbl> <dbl>
-    ##  1 Uni<f3>n~ Universidad~          235         2           3             1     4
-    ##  2 Universi~ Universidad~          199         2           0             0     1
-    ##  3 Everton   Universidad~          157         7           6             0     3
-    ##  4 Universi~ Universidad~          192         4           1             0     2
-    ##  5 Curic<f3~ Universidad~          142         6           3             2     2
-    ##  6 Universi~ Universidad~          168         8           1             1     2
-    ##  7 Coquimbo~ Universidad~          190         3           0             0     2
-    ##  8 Universi~ Universidad~          200         5           0             0     0
-    ##  9 Santiago~ Universidad~          156         4           3             0     0
-    ## 10 Universi~ Universidad~           92         4           1             1     1
+    ##    equipo partido accuratePass wonTackle lostCorners goalsConceded saves
+    ##    <chr>  <chr>          <dbl>     <dbl>       <dbl>         <dbl> <dbl>
+    ##  1 Uni<f~ Univer~          235         2           3             1     4
+    ##  2 Unive~ Univer~          199         2           0             0     1
+    ##  3 Evert~ Univer~          157         7           6             0     3
+    ##  4 Unive~ Univer~          192         4           1             0     2
+    ##  5 Curic~ Univer~          142         6           3             2     2
+    ##  6 Unive~ Univer~          168         8           1             1     2
+    ##  7 Coqui~ Univer~          190         3           0             0     2
+    ##  8 Unive~ Univer~          200         5           0             0     0
+    ##  9 Santi~ Univer~          156         4           3             0     0
+    ## 10 Unive~ Univer~           92         4           1             1     1
     ## # ... with 120 more rows, and 36 more variables: ontargetScoringAtt <dbl>,
     ## #   totalScoringAtt <dbl>, subsMade <dbl>, totalThrows <dbl>,
     ## #   totalYellowCard <dbl>, goalKicks <dbl>, totalPass <dbl>, fkFoulWon <dbl>,
@@ -244,18 +249,18 @@ fh2020
 ```
 
     ## # A tibble: 130 x 43
-    ##    equipo    partido      accuratePass wonTackle lostCorners goalsConceded saves
-    ##    <chr>     <chr>               <dbl>     <dbl>       <dbl>         <dbl> <dbl>
-    ##  1 Universi~ Universidad~          269         2           3             0     2
-    ##  2 Deportiv~ Deportivo A~          253        11           1             1     1
-    ##  3 Uni<f3>n~ Uni<f3>n La~          252         6           3             1     3
-    ##  4 Curic<f3~ Universidad~          245         5           2             0     2
-    ##  5 Uni<f3>n~ Uni<f3>n La~          237         5           2             0     0
-    ##  6 Uni<f3>n~ Universidad~          235         2           3             1     4
-    ##  7 Colo Colo Colo Colo v~          231         4           0             0     0
-    ##  8 Uni<f3>n~ Uni<f3>n Es~          224         7           0             1     0
-    ##  9 Audax It~ Audax Itali~          220         2           1             1     1
-    ## 10 Audax It~ Audax Itali~          219         6           1             0     0
+    ##    equipo partido accuratePass wonTackle lostCorners goalsConceded saves
+    ##    <chr>  <chr>          <dbl>     <dbl>       <dbl>         <dbl> <dbl>
+    ##  1 Unive~ Univer~          269         2           3             0     2
+    ##  2 Depor~ Deport~          253        11           1             1     1
+    ##  3 Uni<f~ Uni<f3~          252         6           3             1     3
+    ##  4 Curic~ Univer~          245         5           2             0     2
+    ##  5 Uni<f~ Uni<f3~          237         5           2             0     0
+    ##  6 Uni<f~ Univer~          235         2           3             1     4
+    ##  7 Colo ~ Colo C~          231         4           0             0     0
+    ##  8 Uni<f~ Uni<f3~          224         7           0             1     0
+    ##  9 Audax~ Audax ~          220         2           1             1     1
+    ## 10 Audax~ Audax ~          219         6           1             0     0
     ## # ... with 120 more rows, and 36 more variables: ontargetScoringAtt <dbl>,
     ## #   totalScoringAtt <dbl>, subsMade <dbl>, totalThrows <dbl>,
     ## #   totalYellowCard <dbl>, goalKicks <dbl>, totalPass <dbl>, fkFoulWon <dbl>,
@@ -302,88 +307,100 @@ fh2020_tiros
 ```
 
     ## # A tibble: 130 x 8
-    ##    equipo   partido      ontargetScoring~ totalScoringAtt blockedScoringA~ goals
-    ##    <chr>    <chr>                   <dbl>           <dbl>            <dbl> <dbl>
-    ##  1 Uni<f3>~ Uni<f3>n Es~                4               5                0     3
-    ##  2 Univers~ Universidad~                3               8                2     2
-    ##  3 Colo Co~ Colo Colo v~                4              10                2     2
-    ##  4 Audax I~ Audax Itali~                3               9                2     2
-    ##  5 Univers~ Deportivo A~                5               9                2     2
-    ##  6 Univers~ Universidad~                4               7                1     2
-    ##  7 Deporti~ Deportivo A~                5              14                4     2
-    ##  8 Uni<f3>~ O'Higgins v~                3               4                1     2
-    ##  9 Deporte~ Deportes Iq~                2               7                2     2
-    ## 10 La Sere~ La Serena v~                4               7                1     2
+    ##    equipo partido ontargetScoring~ totalScoringAtt blockedScoringA~ goals
+    ##    <chr>  <chr>              <dbl>           <dbl>            <dbl> <dbl>
+    ##  1 Uni<f~ Uni<f3~                4               5                0     3
+    ##  2 Unive~ Univer~                3               8                2     2
+    ##  3 Colo ~ Colo C~                4              10                2     2
+    ##  4 Audax~ Audax ~                3               9                2     2
+    ##  5 Unive~ Deport~                5               9                2     2
+    ##  6 Unive~ Univer~                4               7                1     2
+    ##  7 Depor~ Deport~                5              14                4     2
+    ##  8 Uni<f~ O'Higg~                3               4                1     2
+    ##  9 Depor~ Deport~                2               7                2     2
+    ## 10 La Se~ La Ser~                4               7                1     2
     ## # ... with 120 more rows, and 2 more variables: shotOffTarget <dbl>,
     ## #   precision_tiros <dbl>
 
 ## Filtrar Datos
 
 ``` r
-cobresal <- filter(primer_tiempo2020, equipo == "Cobresal")
-cobresal_tiros <- filter(fh2020_tiros, equipo == "Cobresal")
-cobresal_pases <- filter(fh2020_pases, equipo == "Cobresal")
+huachipato <- filter(primer_tiempo2020, equipo == "Huachipato")
+huachipato_tiros <- filter(fh2020_tiros, equipo == "Huachipato")
+huachipato_pases <- filter(fh2020_pases, equipo == "Huachipato")
 ```
 
 ## Agregar Promedio/Suma Total/Min/…
 
 ``` r
-cobresal_pases <- cobresal_pases[,!(colnames(cobresal_pases) %in% c("equipo"))] 
+huachipato_pases <- huachipato_pases[,!(colnames(huachipato_pases) %in% c("equipo"))] 
 
-Promedios_Pas <- c("Promedio Pases",mean(cobresal_pases$accuratePass),mean(cobresal_pases$totalPass),mean(cobresal_pases$precision_pases))
-cobresal_pases <- rbind(cobresal_pases, Promedios_Pas)
+Promedios_Pas <- c("Promedio Pases",mean(huachipato_pases$accuratePass),mean(huachipato_pases$totalPass),mean(huachipato_pases$precision_pases))
+huachipato_pases <- rbind(huachipato_pases, Promedios_Pas)
 
-Max_Pas <- c("Max Pases",max(cobresal_pases$accuratePass),max(cobresal_pases$totalPass),max(cobresal_pases$precision_pases))
-cobresal_pases <- rbind(cobresal_pases, Max_Pas)
+Max_Pas <- c("Max Pases",max(huachipato_pases$accuratePass),max(huachipato_pases$totalPass),max(huachipato_pases$precision_pases))
+huachipato_pases <- rbind(huachipato_pases, Max_Pas)
 
-Min_Pas <- c("Min Pases",min(cobresal_pases$accuratePass),min(cobresal_pases$totalPass),min(cobresal_pases$precision_pases))
-cobresal_pases <- rbind(cobresal_pases, Min_Pas)
+Min_Pas <- c("Min Pases",min(huachipato_pases$accuratePass),min(huachipato_pases$totalPass),min(huachipato_pases$precision_pases))
+huachipato_pases <- rbind(huachipato_pases, Min_Pas)
 
-cobresal_pases
+huachipato_pases
 ```
 
-    ## # A tibble: 11 x 4
-    ##    partido                               accuratePass totalPass precision_pases 
-    ##    <chr>                                 <chr>        <chr>     <chr>           
-    ##  1 Cobresal vs Deportes Iquique          217          254       85.4330708661417
-    ##  2 Cobresal vs Everton                   179          214       83.6448598130841
-    ##  3 Huachipato vs Cobresal                168          207       81.1594202898551
-    ##  4 Cobresal vs Colo Colo                 134          168       79.7619047619048
-    ##  5 Audax Italiano vs Cobresal            141          178       79.2134831460674
-    ##  6 Cobresal vs Universidad Cat<f3>lica   147          194       75.7731958762887
-    ##  7 Universidad Concepci<f3>n vs Cobresal 140          190       73.6842105263158
-    ##  8 La Serena vs Cobresal                 124          169       73.3727810650888
-    ##  9 Promedio Pases                        156.25       196.75    79.0053657930933
-    ## 10 Max Pases                             217          254       85.4330708661417
-    ## 11 Min Pases                             124          168       73.3727810650888
+    ## # A tibble: 10 x 4
+    ##    partido                        accuratePass    totalPass      precision_pases
+    ##    <chr>                          <chr>           <chr>          <chr>          
+    ##  1 Huachipato vs Universidad Con~ 208             250            83.2           
+    ##  2 Huachipato vs Cobresal         193             232            83.18965517241~
+    ##  3 Palestino vs Huachipato        152             206            73.78640776699~
+    ##  4 Huachipato vs Universidad de ~ 97              135            71.85185185185~
+    ##  5 Uni<f3>n Espa<f1>ola vs Huach~ 71              105            67.61904761904~
+    ##  6 Huachipato vs Audax Italiano   89              136            65.44117647058~
+    ##  7 Curic<f3> Unido vs Huachipato  84              143            58.74125874125~
+    ##  8 Promedio Pases                 127.7142857142~ 172.428571428~ 71.97562823173~
+    ##  9 Max Pases                      97              250            83.2           
+    ## 10 Min Pases                      127.7142857142~ 105            58.74125874125~
 
 ## Graficos
 
 ``` r
-pases_cobresal <- cobresal$accuratePass
-cobresal2 <- cobresal[order(cobresal$accuratePass, decreasing = FALSE),]
+pases_hua <- huachipato$accuratePass
+huachipato2 <- huachipato[order(huachipato$accuratePass, decreasing = FALSE),]
 
+#dotchart(huachipato$totalPass, labels = huachipato$partido, cex=0.5, xlab = "Pases", ylab = "Partido")
 
-
-dotchart(cobresal$totalPass, labels = utf8_encode(cobresal$partido), cex=0.5, xlab = "Pases", ylab = "Partido")
+dotchart(huachipato$totalPass, labels = utf8_encode(huachipato$partido), cex=0.5, xlab = "Pases", ylab = "Partido")
 ```
 
 ![](Ayudantia-2_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
 
 ``` r
-dotchart(cobresal$accuratePass, labels = utf8_encode(cobresal$partido), cex=0.5, xlab = "Pases", ylab = "Partido")
+dotchart(huachipato$accuratePass, labels = utf8_encode(huachipato$partido), cex=0.5, xlab = "Pases", ylab = "Partido")
 ```
 
 ![](Ayudantia-2_files/figure-gfm/unnamed-chunk-6-2.png)<!-- -->
 
 ``` r
-dotchart(cobresal2$totalPass, labels = utf8_encode(cobresal$partido), cex=0.5, xlab = "Pases", ylab = "Partido")
+dotchart(huachipato2$totalPass, labels = utf8_encode(huachipato$partido), cex=0.5, xlab = "Pases", ylab = "Partido")
 ```
 
 ![](Ayudantia-2_files/figure-gfm/unnamed-chunk-6-3.png)<!-- -->
 
 ``` r
-dotchart(cobresal2$totalPass, labels = utf8_encode(cobresal$partido), main="Pases Acertados cobresal", pch = 16, col=c("darkblue","dodgerblue"),lcolor="gray90", cex=0.8, xlab = "Pases", ylab = "Partido", cex.main=2,cex.lab=1.5)
+dotchart(huachipato2$totalPass, labels = utf8_encode(huachipato$partido), main="Pases Acertados Huachipato", pch = 16, col=c("darkblue","dodgerblue"),lcolor="gray90", cex=0.8, xlab = "Pases", ylab = "Partido", cex.main=2,cex.lab=1.5)
 ```
 
 ![](Ayudantia-2_files/figure-gfm/unnamed-chunk-6-4.png)<!-- -->
+
+## Analisis de Texto
+
+``` r
+texto <- primer_tiempo2020$partido
+texto <- char_tolower(texto)
+texto <- iconv(texto, to = "ASCII//TRANSLIT")
+
+a <- dfm(texto, remove = c(stopwords("es"), "vs", "Universidad"))
+dim(a)
+```
+
+    ## [1] 130  31
