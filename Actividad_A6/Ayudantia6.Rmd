@@ -1,0 +1,228 @@
+---
+title: "Ayudantia 6: Clusters Jerárquicos"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Actividad de Ayudantia 6
+
+Javiera Bustos
+
+## Importar Librerias
+```{r cargar librerias}
+library(tidyverse)
+library(cluster)
+library(factoextra)
+library(janitor)
+library(dplyr)
+```
+
+## Cargar Datos:
+```{r cargar datos}
+wd = setwd("C:/Users/Javiera/Desktop/RAMOS 2021/Minería/proyectos_mineria/Actividad_A6")
+load("beats.Rdata")
+#tomamos como sample solo 10000 datos
+data <- sample_n(beats, 10000)
+summary(data)
+head(data)
+```
+
+# Pre Procesamiento de los Datos
+
+## Limpieza Datos:
+
+Para este dataset el proceso de limpieza de datos sera un poco mas extensa por lo que debemos ir por partes
+
+- Primero verificar la existencia de valores NA o faltantes
+```{r}
+data[data == ""] <- NA
+
+# Verificamos donde hay valores NAs
+data %>% 
+  summarise_all(list(name = ~sum(is.na(.))))
+
+# De existir eliminamos todas las observaciones que presenten estos datos
+data_pre <- data %>% 
+  filter(!(is.na(track_name)|is.na(artist_name)|is.na(album_name)|is.na(duration_ms)))
+# Corroboramos que no queden datos NA
+data_pre %>% 
+  summarise_all(list(name = ~sum(is.na(.))))
+```
+
+- Segundo filtrar y remover datos duplicados
+```{r limpieza duplicados}
+data_pre <- data_pre[!duplicated(data_pre$track_id),]
+```
+
+
+## Revisar Estructura Datos
+```{r transformar tipo datos}
+
+# Character
+data_char <- c("artist_name", "artist_id", "album_id", "album_type", "album_release_date", "track_id", "track_href", "track_name", "type", "album_name", "key_name", "mode_name", "key_mode")
+# Double
+data_dou <- c("danceability", "energy", "key", "loudness", "mode", "speechiness", "acousticness", "instrumentalness", "liveness", "valence", "tempo", "duration_ms")
+# Volvemos a borrar los datos que puedan haber quedado como NA con el cambio de tipo de variable
+data_pre <- data_pre %>% 
+  filter(!(is.na(key)|is.na(danceability)))
+summary(data_pre)
+str(data_pre)
+```
+## Separo Datos
+```{r separar datos}
+datanum <- data_pre %>% 
+  select(data_dou)
+datachar <- data_pre %>% 
+  select(data_char)
+```
+## Escalar Datos
+```{r escalar datos}
+data_sca <- sapply(datanum, scale)
+
+```
+# Procesamiento de los Datos
+
+## Clustering Jerarquico
+
+- Matriz de Distancias
+```{r matriz distancia}
+#Distancia Euclideana
+d = dist(data_sca, method = "euclidean")
+#Distancia Manhattan
+d1 = dist(data_sca, method = "manhattan")
+#Distancia Minkowski
+d2 = dist(data_sca, method = "minkowski")
+hist(d, main = "Histograma Distancia Euclideana")
+hist(d1, main = "Histograma Distancia Manhattan")
+hist(d2, main = "Histograma Distancia Minkowski")
+```
+## Clustering Aglomerativo
+
+Utilizando la funcion de R base hclust, aplicamos hierarchical clustering, a partir de la matriz de distancias d, y utilizamos el criterio complete linkage
+
+- Complete Model
+```{r complete model}
+# Fijamos una seed para que cada vez que ejecutemos el codigo obtengamos los mismos valores y no vayan cambiado cada vez que ejecutamos el script
+set.seed(369)
+model_complete <- hclust(d, method = "complete")
+summary(model_complete)
+```
+
+- Ward Model
+```{r ward model}
+set.seed(369)
+model_ward <- hclust(d, method = "ward.D")
+summary(model_ward)
+```
+- Comparacion de los coeficientes de aglomeracion para cada metodo
+```{r coef aglomeracion}
+
+models <- c("complete", "ward")
+names(models) <- c("complete", "ward")
+agcoef <- function(x) {
+  agnes(data_sca, method = x)$ac
+}
+
+```
+
+Generamos un dendrograma para visualizar la jerarquia. La libreria 'ggdendro' permite hacer estos diagramas en una sintaxis equivalente a ggplot. 
+
+```{r grafico dendrograma}
+library("ggdendro")
+ggdendrogram(model_complete, rotate = TRUE, theme_dendro = TRUE) 
+```
+
+## Corte
+```{r corte arbol}
+# Determinamos un valor para h lo que nos entregara un valor distinto de k para cada h que escogamos, tambien podemos definir el k desde un inicio
+groups <- cutree(model_complete, h = 9)
+# Se imprimen los tamaños de cada cluster
+table(groups)
+# Generamos una nueva columna para almacenar a que cluster pertenece cada observacion (tanto en data_pre y datanum)
+data_pre$clust <- as.factor(groups)
+datanum$clust <- as.factor(groups)
+# Graficamos las observaciones agrupadas por su cluster
+fviz_cluster(list(data = data_sca, cluster = groups))
+```
+
+## Caracteristicas de los clusters encontrados
+```{r caracteristicas clusters}
+datanum$clust <- as.numeric(as.character(datanum$clust))
+# Generamos una tabla que almacenara los valores promedios para cada uno de los clusters encontrados lo que nos permitira caracterizar a cada uno de ellos
+infoclusters <- aggregate(datanum, by=list(cluster=datanum$clust), mean)
+# Borramos la columna clust ya que se repite esa informacion en la tabla generada
+infoclusters$clust <- NULL
+# Transformamos el tiempo de la cancion a minutos
+infoclusters <- infoclusters %>% mutate(duration_min = infoclusters$duration_ms/60000)
+# Borramos la columna de la duracion en milisegundoss
+infoclusters$duration_ms <- NULL
+infoclusters
+```
+
+
+## Filtremos por clusters con mas datos
+```{r filtrar clusters}
+# 1er Cluster con mas datos
+data_c1 <- data_pre %>% 
+  filter(data_pre$clust == 1)
+# 2do Cluster con mas datos
+data_c2 <- data_pre %>% 
+  filter(data_pre$clust == 4)
+# 3er Cluster con mas datos
+data_c3 <- data_pre %>% 
+  filter(data_pre$clust == 2)
+```
+
+## Tomemos a c2
+```{r cluster_dos}
+# Borramos la columna clust para escalar la datanum de c2
+data_c2$clust <- NULL
+# Selecciono las variables numericas, se escalan las variables y se almacenan los datos en una tabla
+datanumc2 <- data_c2 %>% 
+  select(data_dou) %>% 
+  scale() %>% 
+  as_tibble()
+```
+
+Ahora a C2 le aplicaremos un clustering divisivo
+
+## Clustering Divisivo
+```{r clustering divisivo}
+# Generamos un modelo divisvo mediante la funcion diana de clusters
+modelo_div <- diana(datanumc2)
+# Le pedimos el coeficiente de divisivilidad al modelo
+modelo_div$dc
+# Graficamos nuestro dendrograma divisivo
+pltree(modelo_div, cex = 0.8, hang = -1.5, main = "Dendrogram of diana")
+```
+
+## Cantidad Clusters
+```{r division arbol}
+# Para el caso divisivo le entregaremos el numero de clusters con los que queremos agrupar nuestros datos
+groupsc2 <- cutree(modelo_div, k = 10)
+# Se imprimen los tamaños de cada cluster
+table(groupsc2)
+# Generamos una nueva columna para almacenar a que cluster pertenece cada observacion de data_c2
+data_c2$clust <- as.factor(groupsc2)
+# Graficamos las observaciones agrupadas por su cluster
+fviz_cluster(list(data = datanumc2, cluster = groupsc2))
+# Generamos una nueva columna para almacenar a que cluster pertenece cada observacion de datanumc2
+datanumc2$clust <- as.factor(groupsc2)
+```
+
+## Caracteristicas Clusters encontrados
+```{r caracteristicas cluster dos}
+datanumc2$clust <- as.numeric(as.character(datanumc2$clust))
+# Generamos una tabla que almacenara los valores promedios para cada uno de los clusters encontrados lo que nos permitira caracterizar a cada uno de ellos
+infoclustersc2 <- aggregate(datanumc2, by=list(cluster=datanumc2$clust), mean)
+# Borramos la columna clust ya que se repite esa informacion en la tabla generada
+infoclustersc2$clust <- NULL
+# Transformamos el tiempo de la cancion a minutos
+infoclustersc2 <- infoclustersc2 %>% mutate(duration_min = infoclustersc2$duration_ms/60000)
+# Borramos la columna de la duracion en milisegundoss
+infoclustersc2$duration_ms <- NULL
+infoclustersc2
+```
