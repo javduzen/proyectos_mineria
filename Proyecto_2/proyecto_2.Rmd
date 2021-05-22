@@ -1,0 +1,293 @@
+---
+title: "Proyecto 2"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(tidyverse)
+library(dplyr)
+library(corrplot)
+library(scales)
+library(cluster)
+library(factoextra)
+
+load("beats.Rdata")
+
+head(beats)
+set.seed(123)
+beats_copy <- sample_n(beats, 20000)
+beats <- sample_n(beats, 10000)
+```
+# Comprension de los datos
+El dataset contiene 447662 canciones y 36 variables. Sin embargo, dado a que no se posee una máquina con tan alta capacidad se realizará el analisis con 10.000 datos 
+
+Entre las variables es posible encontrar: Acousticness, Danceability, Energy, Instrumentalness, Liveness, Loudness, Speechiness, Valence, Tempo, entre otras.
+
+### Suposiciones
+
+## Limpieza y comprensión de datos
+
+Comenzaremos visualizando las variables y la data que estas contienen.
+```{r}
+glimpse(beats)
+
+```
+Se puede apreciar que hay varias variables númericas que serán utiles mientras que hay otras alfanumericas que solo sirve para reconocer la canción y no entregarán datos importantes en el análisis, tales como track_uri, track_preview_url, album_id, entre otras.  
+
+Continuaremos chequeando la existencia de NAs y eliminando en caso de que existan
+
+```{r}
+colSums(is.na(beats))
+```
+Encontramos algunos NAs pero como track_preview_url, album_release_year, key_mode no son variables importantes las eliminaremos.  
+
+
+Continuaremos eliminado duplicados, tomando en cuenta que track_id debe ser único usaremos esta variable para reconocer los duplicados.
+
+```{r}
+beats <- subset(beats, select = -c(track_preview_url, album_release_year, key_mode))
+beats <- beats[!duplicated(beats$track_id),]
+glimpse(beats)
+
+```
+Quedamos con 33 variables y 9,998 datos  
+
+Nos enfocaremos solo en las variables caracteristicas (features) de cada canción, en este caso son 10:  
+
+"energy",  "speechiness", "acousticness", "instrumentalness", "loudness","tempo","danceability",'valence' , "liveness", "key"
+Además de conservar el track_id y duration_ms
+
+```{r}
+beats <- subset(beats, select = -c(artist_name, artist_id, album_id, album_type, album_release_date,
+                                   album_release_date_precision, analysis_url, time_signature, 
+                                   disc_number, explicit, track_href, is_local, track_name, type,
+                                   track_uri, external_urls.spotify, album_name, key_name, mode_name, 
+                                   track_number, mode))
+
+glimpse(beats)
+```
+Ahora tenemos 12 variables.  
+Ya que duration ms está en ms lo transformaremos en minutos (duration_min), esto nos ayudará posteriormente.
+```{r}
+beats <- beats %>% mutate (duration_min = duration_ms/60000)
+beats <- subset(beats, select = -c(duration_ms))
+#beats_copy <- beats
+glimpse(beats)
+
+```
+## Exploración de la data
+
+Para generar un análisis preliminar y comprender la data, generaremos un histograma de todas las variables menos track_id y duration_min
+
+```{r}
+df <- subset(beats, select = -c(track_id, duration_min))
+for (col in 1:ncol(df)) {
+    hist(df[,col], main = names(df[col]))
+}
+```
+Aquí podemos visualizar que no todos los datos están en el rango [0,1]. Por lo tanto las variables que no están en este rango serán normalizadas: key, loudness y tempo serán normalizadas 
+
+```{r}
+beats$key <- rescale(beats$key)
+beats$loudness <- rescale(beats$loudness)
+beats$tempo <- rescale(beats$tempo)
+
+glimpse(beats)
+
+```
+```{r}
+summary(beats)
+```
+
+Generaremos una matrix de correlacion entre las variables para entender mejor los patrones y también escalaremos la data.
+
+```{r}
+
+scaled_data <- scale(subset(beats, select = -c(track_id, duration_min)))
+cor_scaled_data <- cor(scaled_data)
+corrplot(cor_scaled_data, type = "upper", order = "hclust", 
+       tl.col = "black", tl.srt = 45)
+
+summary(scaled_data)
+```
+CAMBIAR
+
+Podemos visualizar ciertas correlaciones importantes. Correlación alta-negativa entre las variables acousticness y energy, acousticness y loudness. Correlación alta-positiva entre las variables energy y loudness, valence y danceability.
+
+## Modelo de Clusters
+
+En este análisis se utilizará el modelo de clustering Kmeans. Por lo tanto, se comenzará probando con distintos K para luego analizar ciertos indicadores que nos llevarán a un número de clusters óptimo o cercano al óptimo.
+
+### Probando con K = 3
+
+Para tener una imagen preliminar probaremos con K = 3
+
+```{r}
+numdata3 <- beats[, colnames(beats) %in% c("energy",  "speechiness", "acousticness", "instrumentalness", "loudness","tempo","danceability",'valence' , "liveness", "key")]
+
+df = scale(numdata3) %>% as_tibble()
+k2 <- kmeans(df, centers = 3, nstart = 25)
+str(k2)
+```
+```{r}
+fviz_cluster(k2, data = df)
+```
+Como son 11 variables, es dificil representarlo en 2 dimensiones. Aun así, la función fviz_cluster realiza un analisis de componentes principales (pca) y grafica segun los 2 componentes principales que explican la mayor parte de la varianza, en este caso cerca del 52%.  
+A simple vista, k=3 entrega una buena separación entre grupos.  
+
+Ahora, probaremos con cuatro modelos distintos, con K = 2,3,4 y 5. Los cuales serán graficados.
+
+```{r}
+k2 <- kmeans(df, centers = 2, nstart = 25)
+k3 <- kmeans(df, centers = 3, nstart = 25)
+k4 <- kmeans(df, centers = 4, nstart = 25)
+k5 <- kmeans(df, centers = 5, nstart = 25)
+
+
+p1 <- fviz_cluster(k2, geom = "point", data = df) + ggtitle("k = 2")
+p2 <- fviz_cluster(k3, geom = "point",  data = df) + ggtitle("k = 3")
+p3 <- fviz_cluster(k4, geom = "point",  data = df) + ggtitle("k = 4")
+p4 <- fviz_cluster(k5, geom = "point",  data = df) + ggtitle("k = 5")
+
+library(gridExtra)
+grid.arrange(p1, p2, p3, p4, nrow = 2)
+```
+A grandes rasgos, K=2 y K= 3 se logran ver como clusters bien definidos, aun así debemos continuar con el análisis.
+
+### Análisis de Elbow (codo)
+
+```{r}
+set.seed(123)
+
+fviz_nbclust(df, kmeans, method = "wss")
+```
+Si bien no se puede apreciar muy bien, los quiebres son en 2, 4 y 7. Aun así no muy marcados.
+
+### Método de la silueta
+
+```{r}
+fviz_nbclust(df, kmeans, method = "silhouette")
+```
+Este método demuestra que los mejores K podrían ser 2, 3, 4 y 7.  
+
+Tomando en cuenta los anális previos, realizaremos tres modelos a mayor profundidad con K = 2, 3 y 4. En cada uno de estos se calculará el "Average silhouette width" para luego compararlos y de esta manera escoger el mejor.
+
+### Testeando K=2
+
+```{r}
+set.seed(123)
+
+modelo_kmeans1 <- kmeans(df, centers = 2)
+df1 <- df
+
+df1$clus <- modelo_kmeans1$cluster %>% as.factor()
+
+
+ggplot(df1, aes(energy, acousticness, color=clus)) +
+  geom_point(alpha=0.5, show.legend = T) +
+  theme_bw()
+```
+
+```{r}
+info_clus <- modelo_kmeans1$centers
+info_clus
+```
+Evaluación K=3
+
+```{r}
+coefSil1 <- silhouette(modelo_kmeans1$cluster,dist(df1))
+summary(coefSil1)
+
+fviz_silhouette(coefSil1) + coord_flip()
+```
+Este modelo nos arroja un Average silhouette width = 0,31
+
+### Testeando K=4
+
+
+```{r}
+set.seed(123)
+
+modelo_kmeans2 <- kmeans(df, centers = 4)
+df2 <- df
+
+df2$clus <- modelo_kmeans2$cluster %>% as.factor()
+
+
+ggplot(df2, aes(energy, acousticness, color=clus)) +
+  geom_point(alpha=0.5, show.legend = T) +
+  theme_bw()
+```
+
+```{r}
+info_clus <- modelo_kmeans2$centers
+info_clus
+```
+Evaluación K=4
+
+```{r}
+coefSil2 <- silhouette(modelo_kmeans2$cluster,dist(df2))
+summary(coefSil2)
+
+fviz_silhouette(coefSil2) + coord_flip()
+```
+Este modelo nos arroja un Average silhouette width = 0,23. Menor al arrojado en K=2
+
+### Testeando K = 3
+
+
+```{r}
+set.seed(123)
+
+modelo_kmeans3 <- kmeans(df, centers = 3)
+df3 <- df
+
+df3$clus <- modelo_kmeans3$cluster %>% as.factor()
+
+
+ggplot(df3, aes(energy, acousticness, color=clus)) +
+  geom_point(alpha=0.5, show.legend = T) +
+  theme_bw()
+```
+
+```{r}
+info_clus <- modelo_kmeans3$centers
+info_clus
+```
+Evaluación K=3
+
+```{r}
+coefSil3 <- silhouette(modelo_kmeans3$cluster,dist(df2))
+summary(coefSil3)
+
+fviz_silhouette(coefSil3) + coord_flip()
+```
+Este modelo nos arroja un Average silhouette width = 0,18. Los valores arrojados de K=3 Y K=2 son menores al arrojado por K=2.
+
+# Modelo final (K=3)
+
+Tomando en cuenta el modelo con mejor Average Silhouette, el mejor modelo sería K=2.
+Tomamos una muestra de nuestro dataset y asignamos cada elemento a un cluster
+
+```{r}
+set.seed(123)
+km_final <- kmeans(df, centers = 2)
+data_final <- beats
+data_final$clus <- km_final$cluster %>% as.factor()
+```
+
+
+## Predicción de playlist
+
+Ahora que ya escogimos el modelo a utilizar, seremos capaces de poder predecir a que cluster pertenece una canción dadas sus features (Acousticness, Danceability, Energy, Instrumentalness, Liveness, Loudness, Speechiness, Valence, Tempo y key)  
+
+Para esto escogeremos un canción al azar del set de datos, extraeremos sus features, la posisionaremos en un cluster y de este cluster extraeremos canciones al azar que completen la playlist pedida.  
+
+Ejemplo: Se ingresa una canción con Acousticness= Danceability, Energy, Instrumentalness, Liveness, Loudness, Speechiness, Valence, Tempo y key     
+
+
+## Consideraciones
+- Trabajé con una muestra de 10.000 datos ya que si ejecutaba el programa con más mi computador no era capaz de compilar.
