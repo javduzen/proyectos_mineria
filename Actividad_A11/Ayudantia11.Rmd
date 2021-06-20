@@ -1,0 +1,211 @@
+---
+title: "Ayudantia 11 Arboles de Decision"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Actividad Ayudantia 11
+
+Usé "Hotel Bookings"  
+determinar si la reserva del hotel sera o no cancelada. (Comparen los resultados obtenidos mediante arboles de decision con los modelos de regresion logistica, naive bayes y KNN)
+
+## Cargamos las librerias
+
+```{r cargando librerias, message=FALSE}
+library(plyr)
+library(ggplot2)
+library(tidyverse)
+library(tidymodels)
+library(discrim)
+library(caret)
+library(pROC)
+```
+
+## Cargamos los datos
+
+```{r cargando datos}
+
+
+hotel <- read.csv("C:/Users/Javiera/Desktop/RAMOS 2021/Minería/proyectos_mineria/Actividad_A11/hotel_bookings.csv", na.strings = c("","NA"," ","?"))
+```
+
+```{r exploracion1}
+head(hotel)
+
+summary(hotel)
+```
+
+```{r exploracion2}
+str(hotel)
+```
+
+## Transformamos variables  
+Como la variable is_canceled ya es 0-1 no es necesario cambiarla o mapearla nuevamente.  
+Eliminar NA
+
+```{r eliminar na}
+hotel %>% 
+  summarise_all(funs(sum(is.na(.))))
+
+hotel <- hotel %>% filter(!(is.na(children)))
+
+hotel %>% 
+  summarise_all(funs(sum(is.na(.))))
+```
+```{r}
+hotel$is_canceled <- as.factor(hotel$is_canceled)
+str(hotel)
+```
+
+
+## Exploracion de los datos
+
+```{r}
+table(hotel$is_canceled)
+```
+
+
+```{r  plot count, fig.width=7, fig.height=4}
+hist(as.numeric(hotel$is_canceled))
+```
+
+## Implementacion Decision Trees, separar data en Test y Train
+
+```{r separar data}
+library(tidymodels)
+
+data_split <- initial_split(hotel, prop = 0.8)
+
+# Create data frames for the two sets:
+train_data <- training(data_split) 
+test_data <- testing(data_split)
+
+str(train_data)
+str(test_data)
+```
+
+## Seleccion de Atributos
+
+- Hay atributos que no tienen mucha importancia para el analisis por lo tanto los eliminaremos.
+
+```{r seleccion atributos}
+train <- subset(train_data, select = - c(arrival_date_week_number, arrival_date_day_of_month,arrival_date_year,adr, reservation_status,reservation_status_date,deposit_type,assigned_room_type,meal,country,distribution_channel,required_car_parking_spaces,total_of_special_requests   ))
+
+test <- subset(test_data, select = - c(arrival_date_week_number, arrival_date_day_of_month,arrival_date_year,adr, reservation_status,reservation_status_date,deposit_type,assigned_room_type,meal,country,distribution_channel,required_car_parking_spaces,total_of_special_requests   ))
+```
+
+## Crear Modelo
+
+- Primero creamos la receta de nuestro modelo
+
+```{r receta}
+receta <- 
+  recipe(is_canceled ~ ., data = train)
+
+receta
+```
+
+- Luego procedemos a crear nuestro modelo de arbol de decision con 5 capas de decision, y un minimo numero de entidades por hoja (poda) de 10. La libreria que se utiliza para calcular este modelo sera la de rpart, que viene precargada en los paquetes que estamos utilizando. Con este paso solo definimos el modelo, aun no lo calculamos.
+
+```{r modelo arbol}
+modelo_trees <-
+  decision_tree(tree_depth = 5, min_n = 10) %>% 
+  set_engine("rpart") %>% 
+  set_mode("classification")
+
+modelo_trees
+```
+
+- Ahora hacemos el fit del modelo, calculamos sus predicciones y calculamos el valor de AUC
+
+```{r fit modelo}
+fit_mod <- function(mod){
+  
+  modelo_fit <- 
+  workflow() %>% 
+  add_model(mod) %>% 
+  add_recipe(receta) %>% 
+  fit(data = train)
+
+model_pred <- 
+  predict(modelo_fit, test, type = "prob") %>% 
+  bind_cols(test) 
+
+return(model_pred %>% 
+  roc_auc(truth = is_canceled, .pred_0))
+}
+
+fit_mod(modelo_trees)
+```
+- Ahora compararemos con otros modelos (regresion logistica, naive bayes o KNN), aprovechando que la libreria tidymodels nos facilita realizar esta comparacion. Lo unico que debemos cambiar es el modelo, ya que utilizamos la misma receta y el mismo flujo de validacion para el modelo. Por lo que podemos reutilizar lo que hicimos arriba
+
+## Regresion Logistica  
+este no lo pude ejecutar pq se quedaba pegado
+```{r modelo regresion logistica}
+#modelo_rl <- 
+ # logistic_reg() %>% 
+  #set_engine("glm")
+
+#fit_mod(modelo_rl)
+```
+
+## Naive Bayes
+
+```{r modelo naive bayes}
+library(naivebayes)
+
+modelo_nb <-
+  naive_Bayes(smoothness = .8) %>%
+  set_engine("naivebayes")
+
+fit_mod(modelo_nb)
+```
+
+## KNN
+Tampoco pude ejecutarlo, se me quedaba pegado tod el rato
+```{r modelo KNN}
+#library(kknn)
+
+#modelo_knn <-
+ # nearest_neighbor(neighbors = 5) %>% 
+  #set_engine("kknn") %>% 
+  #set_mode("classification")
+
+#fit_mod(modelo_knn)
+```
+
+- Podemos ver que en este caso el modelo de Naive Bayes y clasificacion son los que obtienen los mejores resultados al clasificar con un AUC de .79 - 0.63
+
+```{r plot tree ,fig.width=15, fig.height=8}
+library(rpart)
+library(rpart.plot)
+
+censo <- rpart(is_canceled~., data = train, method = "class")
+
+rpart.plot(censo)
+
+```
+
+## Predict
+No pude ejecutar
+```{r predict modelo}
+#pred_income <- predict(censo, newdata = test, type = "class")
+#pred_income %>% as.data.frame() %>% head()
+#pred_income %>% as.data.frame() %>% tail()
+
+#test_data$predictedincome <- pred_income
+```
+
+```{r predict ROC}
+## Prob para curva ROC
+
+#pred_incom_roc <- predict(censo, newdata = test, type = "prob")
+#pred_incom_roc %>% as.data.frame() %>% head()
+#pred_incom_roc %>% as.data.frame() %>% tail()
+#pred_incom_roc <- pred_incom_roc %>% as.data.frame()
+#prob <- pred_incom_roc$"1"
+```
+
