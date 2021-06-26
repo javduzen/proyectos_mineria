@@ -1,0 +1,379 @@
+---
+title: "Proyecto 3 Javiera Bustos"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(plyr)
+library(ggplot2)
+library(tidyverse)
+library(yardstick)
+library(tidymodels)
+library(discrim)
+library(caret)
+library(Hmisc)
+library(patchwork)
+library(naivebayes)
+library(kknn)
+library(rpart)
+library(rpart.plot)
+library(pROC)
+```
+
+# Carga de datos
+
+```{r}
+data <- readRDS("C:/Users/Javiera/Desktop/RAMOS 2021/Minería/proyectos_mineria/Proyecto_3/endurance.rds")
+data_copy1 <- data
+head(data)
+```
+
+# Comprensión y exploración datos
+
+```{r}
+summary(data)
+
+```
+Podemos visualizar que ningún campo contiene NA's
+
+```{r}
+str(data)
+```
+
+El dataset cuenta con 167.615 datos en total y 16 variables.  
+Variables enteras:  
+* id
+Variables numéricas:  
+* athlete  
+* calories   
+* distance  
+* moving_time    
+* elapsed_time    
+* total_elevation_gain  
+Variables string/char:  
+* type  
+* elev_low  
+* records  
+* elev_high  
+* max_speed  
+* device_name  
+* average_speed  
+* has_heartrate  
+Variables datetime    
+* start_date_local   
+
+Las variables elev_low, records, elev_high, max_speed, average_speed si bien son de tipo chr se refieren a datos numericos que están en tipo string, por lo tanto solo hay que hacer la conversción str->float.
+
+Para poder cambiar las variables chr a numéricas veremos qué valores únicos hay en aquellas que sí almacenan strings.
+
+```{r}
+head(unique(data[c("type")]))
+head(unique(data[c("records")]))
+unique(data[c("device_name")])
+unique(data[c("has_heartrate")])
+```
+La variable "type" almacena 5 strings diferentes: Ride, Run, Walk, Hike y EBikeRide.  
+La variable "records" almacena enteros pero en formato str.  
+La variable "device_name" almacena 171 string diferentes.  
+La variable "has_heartrate" almacena 2 tipos de strings: FALSE, TRUE.  
+
+# Transformación de datos  
+
+Procederemos a transformar aquellas variables no numéricas a númericas, con los siguientes valores:  
+1. type  
+Ride: 0, EBikeRide: 0 , Run: 1, Walk: 1, Hike: 1 
+
+
+```{r}
+data$type <- mapvalues(data$type, from=c('Ride','EBikeRide'), to=c(0,0))
+data$type <- mapvalues(data$type, from=c('Run','Walk', 'Hike'), to=c(1,1,1))
+data$type <- as.factor(data$type)
+
+
+```
+```{r}
+str(data)
+```
+
+Transformaremos todos los datos chr a numericos y tambien el campo start_date_local a numerico
+```{r}
+data[, c(6:9,13)] <- sapply(data[, c(6:9,13)], as.numeric)
+data$start_date_local <- as.numeric(data$start_date_local)
+
+```
+Ya que la variable device_name requiere de más procesamiento de texto, en esta instancia la eliminaremos.
+```{r}
+data$device_name <- NULL
+```
+
+## Análisis preliminar  
+
+Ya con la data limpia y numerica, procederemos a realizar un análisis preliminar para conocerla mejor.
+
+```{r}
+describe(data)
+```
+Algunas variables, tales como: id, athlete, has_heartrate, start_date_local y records parecen no ser relevantes para el estudio, por lo tanto las eliminaremos
+
+```{r}
+data$id <- NULL
+data$athlete <- NULL
+data$records <- NULL
+data$has_heartrate <- 
+data$start_date_local <- NULL
+
+```
+
+Eliminaremos las variables elev_high y low, ya que total_elevation_gain tambien las representa
+```{r}
+#data$elev <- as.numeric(as.numeric(data$elev_high) - as.numeric(data$elev_low))
+data$elev_high <- NULL
+data$elev_low <- NULL
+```
+
+## Outliers  
+Como para este estudionos interesa diferenciar las actividades realizadas en bicicleta o a pie ciertas características, graficaremos los outliers en estos campos, ya que probablemente los datos atípicos son aquellos que los usuarios ingresaron mal.
+(Ride: 0, Run: 1, Walk: 2, Hike: 3 y EBikeRide:4)
+
+```{r}
+out_distance <- filter(data, type == 0)
+boxplot(out_distance$distance, horizontal = TRUE)
+
+out_distance2 <- filter(data, type == 1)
+boxplot(out_distance2$distance, horizontal = TRUE)
+```
+En ambos casos es posible divisar gran cantidad de datos outliers, de esta manera podemos confirmar a simple vista que sí hay actividades clasificadas como "Ride" o "Walk" pero erroneas.
+```{r}
+out_avspeed <- filter(data, type == 0)
+boxplot(as.numeric(out_avspeed$average_speed), horizontal = TRUE)
+
+out_avspeed2 <- filter(data, type == 1)
+boxplot(as.numeric(out_avspeed2$average_speed), horizontal = TRUE)
+```
+
+# Modelos  
+A continuación utilizaremos varios modelos de predicción con la finalidad de escoger el mejor y finalmente poder predecir si una actividad ingresada como "Ride" o "Walk" es realmente tal actividad o el usuario se equivocó al ingresarla.  
+
+Primero separaremos nuestra data en data de entrenamiento y test.
+
+```{r}
+#Como en mi notebook los modelos no corrian por la cantidad de datos, tuve que disminuirla
+set.seed(123)
+data_sample <- sample_n(data, 10000)
+#data_sample2 <-data_sample[!(data_sample$type== 0 | data_sample$type== 1),]
+
+data_split <- initial_split(data_sample, prop = 0.8)
+
+train <- training(data_split) 
+test <- testing(data_split)
+test$pred_0 <- NULL
+
+str(train)
+```
+## Creación de modelo
+
+```{r}
+receta <- 
+  recipe(type ~ ., data = train)
+
+receta
+```
+## Modelo de árbol de decisión  
+Definimos el modelo de arbol de decision con 5 capas de decision, y un minimo numero de entidades por hoja (poda) de 10.
+
+```{r}
+modelo_trees <-
+  decision_tree(tree_depth = 5, min_n = 10) %>% 
+  set_engine("rpart") %>% 
+  set_mode("classification")
+
+modelo_trees
+```
+A continuación hacemos el fit del modelo, calculamos sus predicciones y calculamos el valor de AUC.
+
+```{r}
+library(tibble)
+library(pROC)
+
+fit_mod <- function(mod){
+  
+  modelo_fit <- 
+  workflow() %>% 
+  add_model(mod) %>% 
+  add_recipe(receta) %>% 
+  fit(data = train)
+
+model_pred <- 
+  predict(modelo_fit, test, type = "prob") %>% 
+  bind_cols(test) 
+
+return(model_pred
+       %>% 
+  roc_auc(truth = type, .pred_0))
+
+}
+```
+
+
+```{r}
+
+fit_mod(modelo_trees)
+```
+
+Los resultados arrojados por el modelo Arbol de decision son, roc_auc = 0.92
+
+Ahora se iterará con otros modelos con el fin de encontrar el que posea el mejor AUC.
+
+## Naive Bayes
+
+```{r}
+library(naivebayes)
+
+modelo_nb <-
+  naive_Bayes(smoothness = .8) %>%
+  set_engine("naivebayes")
+
+fit_mod(modelo_nb)
+```
+Naive bayes entrega un AUC de 0,95
+
+## KNN
+
+```{r}
+
+#library(kknn)
+
+#modelo_knn <-
+ # nearest_neighbor(neighbors = 6) %>% 
+  #set_engine("kknn") %>% 
+  #set_mode("classification")
+
+#fit_mod(modelo_knn) 
+```
+
+
+## Regresion Logistica
+```{r}
+modelo_rl <- 
+  logistic_reg() %>% 
+  set_engine("glm")
+
+fit_mod(modelo_rl)
+```
+
+Regresión logistica entrega un AUC = 0,90
+
+```{r}
+library(rpart.plot)
+
+type <- rpart(type~., data = train, method = "class")
+
+rpart.plot(type)
+```
+
+
+
+### Mejores resultados de modelos
+
+Aquellos modelos que arrojaron mayor AUC son Decision Trees y Naive Bayes. Escogeremos Decision Trees ya que Naives posee un AUC demasiado alto y esto podría ser señal de overfitting en el modelo.
+
+# Predicción
+
+```{r}
+library(rpart.plot) 
+pred_type <- predict(type, newdata = test, type = "class")
+pred_type %>% as.data.frame() %>% head()
+```
+```{r}
+pred_type %>% as.data.frame() %>% tail()
+```
+```{r}
+test$predictedtype <- pred_type
+```
+```{r}
+pred_type_roc <- predict(type, newdata = test, type = "prob")
+pred_type_roc %>% as.data.frame() %>% head()
+pred_type_roc <- pred_type_roc %>% as.data.frame()
+prob <- pred_type_roc$"1"
+```
+
+
+# Evaluación modelo
+
+```{r}
+cm <- confusionMatrix(table(test$type, test$predictedtype))
+test$predictedtype <- as.factor(test$predictedtype)
+
+table <- data.frame(confusionMatrix(test$type, test$predictedtype)$table)
+
+print(cm)
+```
+
+```{r}
+plotTable <- table %>%
+  mutate(goodbad = ifelse(table$Prediction == table$Reference, "Good", "Bad")) %>%
+  group_by(Reference) %>%
+  mutate(prop = Freq/sum(Freq))
+
+confusionMatrix <- ggplot(data = plotTable, mapping = aes(x = Reference, y = Prediction, fill = goodbad, alpha = prop)) +
+  geom_tile() +
+  geom_text(aes(label = Freq), vjust = .5, fontface  = "bold", alpha = 25, size = 8) +
+  scale_fill_manual(name = " ", values = c(Good = "#F0FF00", Bad = "#34495E")) +
+  scale_alpha(name = " ") +
+  theme_classic() +
+  xlim(rev(levels(table$Reference))) +
+  scale_y_discrete(name = "Predicted", limits = c("1","0")) + 
+  scale_x_discrete(name = "Actual", position = "top") +
+  #theme(legend.position = " ") +
+  theme(text=element_text(size=25,  family="sans")) + 
+  ggtitle("Confusion Matrix") +
+  theme(plot.title = element_text(size = 25, family="sans", face = "bold"))
+```
+
+```{r}
+confusionMatrix
+```
+La matriz nos entrega resultados alentadores frente al modelo. tan solo 111 datos fueron clasificados mal.
+
+## Curva ROC
+
+
+```{r}
+ROC <- roc(test$type,prob)
+```
+```{r}
+plot(ROC, col = "#fd634b", family = "sans", cex = 2, main = "CART Model ROC Curve 
+AUC = 0.92")
+```
+
+
+```{r}
+auc(ROC)
+```
+## Chequeo de Overfitting
+```{r}
+is_predictedtype <- predict(type,newdata=train,type='class')
+misClassError <- mean(is_predictedtype != train$type)
+print(paste('Train-set Accuracy =',1-misClassError))
+```
+```{r}
+misClassError <- mean(test$predictedtype != test$type)
+print(paste('Test-set Accuracy =',1-misClassError))
+```
+- Tomando en cuenta los resultado de Train y Test accuracy podemos concluir que el modelo no se supero asi mismo.
+
+
+
+# Conclusiones
+
+Luego de probar con varios modelos se llegó a la conclusión de que el mejor modelo sería DECISION TREES, esto por poseer el AUC más alto y no presentar overfitting.  
+
+Utilizando este modelo podremos predecir el tipo de actividad ingresada por el usuario tomando encuenta: calories, max_speed, moving_time, elapsed_time, average_speed y total_elevation_gain.  
+
+En caso que la actividad predecida sea distinta a la ingresada por el usuario podría levantarse una alerta o un nuevo campo que registre que los datos ingresados probablemente no son los correctos.
+
+
+
